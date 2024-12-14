@@ -1,47 +1,49 @@
-import axios from "axios";
-import { useRouter } from "next/router";
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useState, useEffect } from 'react';
 
-const AuthContext = createContext();
+const AuthContext = createContext({});
 
-export const useAuth = () => useContext(AuthContext);
-
-export const AuthProvider = ({ children }) => {
+export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
 
-  // Check for JWT token when the app loads
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const response = await axios.get("/api/checkAuth");
-        if (response.status === 200) {
-          setUser(response.data.user); // Set user data from token
-        }
-      } catch (error) {
-        setUser(null); // Not authenticated
-      } finally {
-        setLoading(false); // Done loading
-      }
-    };
-
+    // Check for existing session
     checkAuth();
   }, []);
 
-  const login = async (pin) => {
+  const checkAuth = async () => {
     try {
-      await axios.post("/api/login", { pin });
-      router.push("/"); // Redirect to home after login
+      const response = await fetch('/api/checkAuth');
+      if (response.ok) {
+        const data = await response.json();
+        setUser(data.user);
+      }
     } catch (error) {
-      throw new Error("Invalid PIN");
+      console.error('Auth check failed:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
+  const login = async (pin, role) => {
+    const response = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pin, role }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Login failed');
+    }
+
+    const data = await response.json();
+    setUser(data.user);
+    return data;
+  };
+
   const logout = async () => {
-    await axios.post("/api/logout");
+    await fetch('/api/logout', { method: 'POST' });
     setUser(null);
-    router.push("/login");
   };
 
   return (
@@ -49,4 +51,6 @@ export const AuthProvider = ({ children }) => {
       {children}
     </AuthContext.Provider>
   );
-};
+}
+
+export const useAuth = () => useContext(AuthContext);
