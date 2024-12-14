@@ -11,7 +11,13 @@ export default function handler(req, res) {
 
   try {
     const decoded = jwt.verify(token, SECRET_KEY);
-    return res.status(200).json({ user: decoded });
+    return res.status(200).json({ 
+      user: {
+        id: decoded.id,
+        role: decoded.role,
+        name: decoded.name
+      } 
+    });
   } catch (err) {
     return res.status(401).json({ message: 'Invalid token' });
   }

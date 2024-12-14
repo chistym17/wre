@@ -1,36 +1,49 @@
-import { serialize } from "cookie";
-import jwt from "jsonwebtoken";
+import jwt from 'jsonwebtoken';
+import cookie from 'cookie';
 
-const SECRET_KEY = process.env.JWT_SECRET_KEY; // Use env variable for production
-const VALID_PINS = process.env.VALID_PINS
-  ? process.env.VALID_PINS.split(",").map((pin) => pin.trim())
-  : [];
+const SECRET_KEY = process.env.JWT_SECRET_KEY || 'your-secret-key';
+const ADMIN_PINS = (process.env.ADMIN_PINS || '').split(',');
+const STUDENT_PINS = (process.env.STUDENT_PINS || '').split(',');
 
-export default function handler(req, res) {
-  const { pin } = req.body;
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ message: 'Method not allowed' });
+  }
 
-  console.log("Received PIN:", pin); // Add logging for debugging
+  const { pin, role } = req.body;
 
-  // Check if the provided PIN is in the list of valid PINs
-  if (VALID_PINS.includes(pin)) {
-    // Create JWT token
-    const token = jwt.sign({ user: "admin" }, SECRET_KEY, { expiresIn: "1h" });
+  try {
+    let userData;
+    
+    if (role === 'admin' && ADMIN_PINS.includes(pin)) {
+      userData = {
+        id: 1,
+        role: 'admin',
+        name: 'Admin User'
+      };
+    } else if (role === 'student' && STUDENT_PINS.includes(pin)) {
+      userData = {
+        id: 2,
+        role: 'student',
+        name: 'Student User'
+      };
+    } else {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
 
-    // Set the token in an HTTP-only cookie
-    res.setHeader(
-      "Set-Cookie",
-      serialize("token", token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production", // Secure cookie in production
-        maxAge: 60 * 60, // 1 hour
-        sameSite: "strict",
-        path: "/",
-      })
-    );
+    const token = jwt.sign(userData, SECRET_KEY, { expiresIn: '1h' });
 
-    res.status(200).json({ message: "Login successful" });
-  } else {
-    console.log("Invalid PIN");
-    res.status(401).json({ message: "Invalid PIN" });
+    res.setHeader('Set-Cookie', cookie.serialize('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 3600,
+      path: '/'
+    }));
+
+    res.status(200).json({ user: userData });
+
+  } catch (error) {
+    res.status(500).json({ message: 'Internal server error' });
   }
 }

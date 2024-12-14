@@ -11,6 +11,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { useAuth } from "@/context/AuthContext";
+import { useRouter } from 'next/router';
 
 const WaveBackground = () => (
   <div className="fixed inset-0 z-0 opacity-20 pointer-events-none">
@@ -30,6 +32,8 @@ export default function WaterCourseAdmin() {
   const [newSubjectDescription, setNewSubjectDescription] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
+  const { logout } = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
     const initialLevels = Array.from({ length: 4 }, (_, i) => ({
@@ -123,6 +127,15 @@ export default function WaterCourseAdmin() {
         )
       }))
     })));
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      router.push('/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
   };
 
   return (
@@ -219,7 +232,7 @@ export default function WaterCourseAdmin() {
                 <User className="mr-2 h-4 w-4" />
                 <span>Profile</span>
               </DropdownMenuItem>
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={handleLogout}>
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>Log out</span>
               </DropdownMenuItem>
